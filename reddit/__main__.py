@@ -5,6 +5,7 @@
 
 import requests
 from datetime import datetime
+from reddit.db import Table
 
 
 def user_token() -> str:
@@ -24,7 +25,7 @@ if __name__ == "__main__":
     params = {"limit": "100"}
 
     full_names = []
-    table = []
+    table = Table()
     for _ in range(5):
         response = requests.get(
             "https://oauth.reddit.com/r/programming/new", headers=headers, params=params
@@ -35,15 +36,13 @@ if __name__ == "__main__":
             fullname = f"{data.get("kind")}_{data.get("id")}"
             params["after"] = fullname
             if fullname not in full_names:
-                table.append(
-                    {
-                        "author": data.get("author"),
-                        "created": datetime.fromtimestamp(
-                            data.get("created_utc")
-                        ).strftime("%Y-%m-%dT%H:%M:%S"),
-                        "num_comments": data.get("num_comments"),
-                    }
+                table.add_row(
+                    data.get("author"),
+                    datetime.fromtimestamp(data.get("created_utc")).strftime(
+                        "%Y-%m-%dT%H:%M:%S"
+                    ),
+                    data.get("num_comments"),
                 )
                 full_names.append(fullname)
-    for item in enumerate(table):
+    for item in enumerate(table.rows()):
         print(item)
