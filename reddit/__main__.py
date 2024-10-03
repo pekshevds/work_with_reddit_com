@@ -42,12 +42,12 @@ if __name__ == "__main__":
     TOKEN = read_token()
     if not TOKEN:
         raise ValueError("please, update token. python.exe -m reddit.token")
-
-    full_name = ""
     FULL_NAMES = []
+    QUERY_COUNT = 5
+    full_name = ""
     # Сводная таблица
     table = Table()
-    for _ in range(5):
+    for _ in range(QUERY_COUNT):
         # Запоняем таблицу, на каждой итерации добавляем данные
         fill_table(table, TOKEN, full_name)
 
