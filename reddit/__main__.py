@@ -3,65 +3,55 @@
 пользователей, которые написали больше всего комментариев и топ пользователей, которые написали больше всего постов.
 Топ - это когда сверху тот, кто больше всех написал комментариев/постов, на втором месте следущий за ним и так далее."""
 
-import requests
-from typing import Any, NamedTuple
 from datetime import datetime, timedelta
 from reddit.db import Table
 from reddit.token import read_token
+from reddit.utils import (
+    data_request,
+    extract_posts,
+    extract_post_data,
+    extract_full_name,
+    extract_post_attributes,
+)
+
+FULL_NAMES: list[str] = []
 
 
-class PostData(NamedTuple):
-    author: str
-    created_utc: datetime
-    num_comments: int
-
-
-def data_request(headers: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
-    response = requests.get(
-        "https://oauth.reddit.com/r/programming/new", headers=headers, params=params
-    )
-    try:
-        return response.json()
-    except requests.exceptions.JSONDecodeError:
-        return {}
-
-
-def extract_posts(response: dict[str, Any]) -> list[dict[str, Any]]:
-    data = response.get("data", {})
-    return data.get("children", [])
-
-
-def extract_post_attributes(post: dict[str, Any]) -> PostData:
-    return PostData(
-        post.get("author", ""),
-        datetime.fromtimestamp(post.get("created_utc", 0.0)),
-        post.get("num_comments", 0),
-    )
+def fill_table(table: Table, token: str, after) -> None:
+    full_name = ""
+    # Дергаем порцию данных с reddit
+    response = data_request(token, after)
+    # Извлекаем посты из выборки данных
+    posts = extract_posts(response)
+    for post in posts:
+        # Извлекаем основные (не технические) данные поста
+        post_data = extract_post_data(post)
+        # Извлекаем и рассчитываем полное уникальное имя поста
+        full_name = extract_full_name(post_data)
+        if full_name in FULL_NAMES:
+            continue
+        # Извлекаем атрибуты поста для анализа
+        post_attr = extract_post_attributes(post_data)
+        # Помещаем данные в сводную таблицу
+        table.add_row(post_attr.author, post_attr.created_utc, post_attr.num_comments)
+        FULL_NAMES.append(full_name)
 
 
 if __name__ == "__main__":
+    # Получаем токен
     TOKEN = read_token()
     if not TOKEN:
         raise ValueError("please, update token. python.exe -m reddit.token")
-    headers = {"Authorization": f"bearer {TOKEN}"}
-    params = {"limit": "100"}
 
-    full_names = []
+    full_name = ""
+    FULL_NAMES = []
+    # Сводная таблица
     table = Table()
     for _ in range(5):
-        response = data_request(headers, params)
-        posts = extract_posts(response)
-        for post in posts:
-            post_data = post.get("data", {})
-            full_name = f"{post_data.get("kind")}_{post_data.get("id")}"
-            params["after"] = full_name
-            if full_name not in full_names:
-                post_attr = extract_post_attributes(post_data)
-                table.add_row(
-                    post_attr.author, post_attr.created_utc, post_attr.num_comments
-                )
-                full_names.append(full_name)
+        # Запоняем таблицу, на каждой итерации добавляем данные
+        fill_table(table, TOKEN, full_name)
 
+    # Расчет даты -3 дня
     delta = datetime.now().date() - timedelta(days=3)
     date = datetime(year=delta.year, month=delta.month, day=delta.day)
 
