@@ -8,9 +8,73 @@ class Table:
         self.connection.execute("CREATE TABLE _table (author, created, num_comments)")
 
     def add_row(self, author: str, created: datetime, num_comments: int) -> None:
-        self.connection.execute(
-            f"INSERT INTO _table (author, created, num_comments) VALUES ({author}, {created}, {num_comments})"
+        cursor = self.connection.cursor()
+        cursor.execute(
+            "INSERT INTO _table (author, created, num_comments) VALUES (?, ?, ?)",
+            (
+                author,
+                created,
+                num_comments,
+            ),
         )
 
-    def rows(self) -> list[dict[str, datetime, int]]:
-        return list(self.connection.execute("SELECT * FROM _table"))
+    def raw_rows(self) -> list[tuple[str, datetime, int]]:
+        cursor = self.connection.cursor()
+        return list(cursor.execute("SELECT * FROM _table"))
+
+    def rows(self, created: datetime) -> list[tuple[str, int, int]]:
+        cursor = self.connection.cursor()
+        return list(
+            cursor.execute(
+                """
+                SELECT
+                    author, COUNT(created) AS num_posts, SUM(num_comments) AS num_comments
+                FROM _table
+                WHERE
+                    created >= ?
+                GROUP BY
+                    author
+                ORDER BY
+                    num_comments DESC, num_posts DESC
+                """,
+                (created,),
+            )
+        )
+
+    def rows_most_of_comments(self, created: datetime) -> list[tuple[str, int]]:
+        cursor = self.connection.cursor()
+        return list(
+            cursor.execute(
+                """
+                SELECT
+                    author, SUM(num_comments) AS num_comments
+                FROM _table
+                WHERE
+                    created >= ?
+                GROUP BY
+                    author
+                ORDER BY
+                    num_comments DESC
+                """,
+                (created,),
+            )
+        )
+
+    def rows_most_of_posts(self, created: datetime) -> list[tuple[str, int]]:
+        cursor = self.connection.cursor()
+        return list(
+            cursor.execute(
+                """
+                SELECT
+                    author, COUNT(created) AS num_posts
+                FROM _table
+                WHERE
+                    created >= ?
+                GROUP BY
+                    author
+                ORDER BY
+                    num_posts DESC
+                """,
+                (created,),
+            )
+        )

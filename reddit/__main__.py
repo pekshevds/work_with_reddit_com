@@ -4,21 +4,43 @@
 Топ - это когда сверху тот, кто больше всех написал комментариев/постов, на втором месте следущий за ним и так далее."""
 
 import requests
-from datetime import datetime
+from typing import Any, NamedTuple
+from datetime import datetime, timedelta
 from reddit.db import Table
+from reddit.token import read_token
 
 
-def user_token() -> str:
+class PostData(NamedTuple):
+    author: str
+    created_utc: datetime
+    num_comments: int
+
+
+def data_request(headers: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+    response = requests.get(
+        "https://oauth.reddit.com/r/programming/new", headers=headers, params=params
+    )
     try:
-        with open("token.txt", "r") as file:
-            token = file.readline()
-    except FileNotFoundError:
-        token = ""
-    return token
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return {}
+
+
+def extract_posts(response: dict[str, Any]) -> list[dict[str, Any]]:
+    data = response.get("data", {})
+    return data.get("children", [])
+
+
+def extract_post_attributes(post: dict[str, Any]) -> PostData:
+    return PostData(
+        post.get("author", ""),
+        datetime.fromtimestamp(post.get("created_utc", 0.0)),
+        post.get("num_comments", 0),
+    )
 
 
 if __name__ == "__main__":
-    TOKEN = user_token()
+    TOKEN = read_token()
     if not TOKEN:
         raise ValueError("please, update token. python.exe -m reddit.token")
     headers = {"Authorization": f"bearer {TOKEN}"}
@@ -27,22 +49,30 @@ if __name__ == "__main__":
     full_names = []
     table = Table()
     for _ in range(5):
-        response = requests.get(
-            "https://oauth.reddit.com/r/programming/new", headers=headers, params=params
-        )
-        posts = response.json().get("data").get("children")
+        response = data_request(headers, params)
+        posts = extract_posts(response)
         for post in posts:
-            data = post.get("data")
-            fullname = f"{data.get("kind")}_{data.get("id")}"
-            params["after"] = fullname
-            if fullname not in full_names:
+            post_data = post.get("data", {})
+            full_name = f"{post_data.get("kind")}_{post_data.get("id")}"
+            params["after"] = full_name
+            if full_name not in full_names:
+                post_attr = extract_post_attributes(post_data)
                 table.add_row(
-                    data.get("author"),
-                    datetime.fromtimestamp(data.get("created_utc")).strftime(
-                        "%Y-%m-%dT%H:%M:%S"
-                    ),
-                    data.get("num_comments"),
+                    post_attr.author, post_attr.created_utc, post_attr.num_comments
                 )
-                full_names.append(fullname)
-    for item in enumerate(table.rows()):
+                full_names.append(full_name)
+
+    delta = datetime.now().date() - timedelta(days=3)
+    date = datetime(year=delta.year, month=delta.month, day=delta.day)
+
+    print("raw")
+    for item in enumerate(table.raw_rows()):
+        print(item)
+
+    print("comments")
+    for item in enumerate(table.rows_most_of_comments(date)):
+        print(item)
+
+    print("posts")
+    for item in enumerate(table.rows_most_of_posts(date)):
         print(item)
