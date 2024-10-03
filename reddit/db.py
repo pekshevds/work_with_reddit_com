@@ -5,7 +5,12 @@ from datetime import datetime
 class Table:
     def __init__(self) -> None:
         self.connection = sqlite3.connect("file::memory:?cache=shared", uri=True)
-        self.connection.execute("CREATE TABLE _table (author, created, num_comments)")
+        self.connection.execute(
+            "CREATE TABLE IF NOT EXISTS _table (author, created, num_comments)"
+        )
+
+    def __del__(self) -> None:
+        self.connection.close()
 
     def add_row(self, author: str, created: datetime, num_comments: int) -> None:
         cursor = self.connection.cursor()

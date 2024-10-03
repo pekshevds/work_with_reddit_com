@@ -30,7 +30,7 @@ def extract_posts(response: dict[str, Any]) -> list[Post]:
     return data.get("children", [])
 
 
-def extract_post_data(post) -> Post:
+def extract_post_data(post: dict[str, Any]) -> Post:
     return post.get("data", {})
 
 
