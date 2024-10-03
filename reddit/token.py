@@ -15,14 +15,14 @@ def data() -> dict[str, str]:
     }
 
 
-def save_token(token) -> None:
-    with open("token.txt", "w", encoding="utf-8") as file:
+def save_token(token: str) -> None:
+    with open("reddit/token.txt", "w", encoding="utf-8") as file:
         file.write(token)
 
 
 def read_token() -> str:
     try:
-        with open("token.txt", "r") as file:
+        with open("reddit/token.txt", "r") as file:
             token = file.readline()
     except FileNotFoundError:
         token = ""
