@@ -10,15 +10,16 @@ from reddit.utils import (
     data_request,
     extract_posts,
     extract_post_data,
-    extract_full_name,
+    calculate_after,
     extract_post_attributes,
 )
 
-FULL_NAMES: list[str] = []
+AFTERS: list[str] = []
+QUERY_COUNT: int = 5
+TOKEN: str = read_token()
 
 
-def fill_table(table: Table, token: str, after) -> None:
-    full_name = ""
+def fill_table(table: Table, token: str, after: str, afters: list[str]) -> None:
     # Дергаем порцию данных с reddit
     response = data_request(token, after)
     # Извлекаем посты из выборки данных
@@ -27,29 +28,25 @@ def fill_table(table: Table, token: str, after) -> None:
         # Извлекаем основные (не технические) данные поста
         post_data = extract_post_data(post)
         # Извлекаем и рассчитываем полное уникальное имя поста
-        full_name = extract_full_name(post_data)
-        if full_name in FULL_NAMES:
+        after = calculate_after(post_data)
+        if after in afters:
             continue
         # Извлекаем атрибуты поста для анализа
         post_attr = extract_post_attributes(post_data)
         # Помещаем данные в сводную таблицу
         table.add_row(post_attr.author, post_attr.created_utc, post_attr.num_comments)
-        FULL_NAMES.append(full_name)
+        afters.append(after)
 
 
 if __name__ == "__main__":
-    # Получаем токен
-    TOKEN = read_token()
     if not TOKEN:
         raise ValueError("please, update token. python.exe -m reddit.token")
-    FULL_NAMES = []
-    QUERY_COUNT = 5
-    full_name = ""
+    after = ""
     # Сводная таблица
     table = Table()
     for _ in range(QUERY_COUNT):
         # Запоняем таблицу, на каждой итерации добавляем данные
-        fill_table(table, TOKEN, full_name)
+        fill_table(table, TOKEN, after, AFTERS)
 
     # Расчет даты -3 дня
     delta = datetime.now().date() - timedelta(days=3)

@@ -34,7 +34,7 @@ def extract_post_data(post) -> Post:
     return post.get("data", {})
 
 
-def extract_full_name(post_data: Post) -> str:
+def calculate_after(post_data: Post) -> str:
     return f"{post_data.get("kind", "")}_{post_data.get("id", "")}"
 
 
