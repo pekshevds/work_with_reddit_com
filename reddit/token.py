@@ -1,32 +1,32 @@
 import requests
 from typing import Any
-import reddit.config as config
+from dotenv import load_dotenv, set_key
+from os import environ
+
+DOTENV_PATH = "reddit/.env"
+load_dotenv(DOTENV_PATH)
 
 
-def auth() -> dict[str, str]:
-    return requests.auth.HTTPBasicAuth(config.CLIENT_ID, config.SECRET_TOKEN)
+def get_auth() -> dict[str, str]:
+    return requests.auth.HTTPBasicAuth(
+        environ.get("CLIENT_ID", ""), environ.get("SECRET_TOKEN", "")
+    )
 
 
-def data() -> dict[str, str]:
+def get_data() -> dict[str, str]:
     return {
         "grant_type": "password",
-        "username": config.USERNAME,
-        "password": config.PASSWORD,
+        "username": environ.get("USERNAME", ""),
+        "password": environ.get("PASSWORD", ""),
     }
 
 
 def save_token(token: str) -> None:
-    with open("reddit/token.txt", "w", encoding="utf-8") as file:
-        file.write(token)
+    set_key(DOTENV_PATH, "TOKEN", token)
 
 
 def read_token() -> str:
-    try:
-        with open("reddit/token.txt", "r") as file:
-            token = file.readline()
-    except FileNotFoundError:
-        token = ""
-    return token
+    return environ.get("TOKEN", "")
 
 
 def extract_token_from(result: dict[str, Any]) -> str:
@@ -45,7 +45,7 @@ def token_request(auth: dict[str, str], data: dict[str, str]) -> dict[str, Any]:
 
 
 def update_user_token() -> tuple[str, bool]:
-    result = token_request(auth(), data())
+    result = token_request(get_auth(), get_data())
     token = extract_token_from(result)
     if token:
         return token, True
