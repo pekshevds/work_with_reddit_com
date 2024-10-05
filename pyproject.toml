@@ -8,6 +8,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+requests = "^2.32.3"
 
 [tool.poetry.group.linters.dependencies]
 mypy = "^1.11.2"
@@ -23,6 +24,15 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.mypy]
 enable_incomplete_feature = ["NewGenericSyntax"]
+disallow_untyped_defs = true
+show_error_codes = true
+no_implicit_optional = true
+# warn_return_any = true
+warn_unused_ignores = true
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-addopts = "--cov=reddit --cov-report=term-missing:skip-covered --cov-report=xml:coverage.xml --cov-branch --cov-fail-under=50"
+addopts = "--cov=reddit --cov-report=term-missing:skip-covered --cov-report=xml:coverage.xml --cov-branch --cov-fail-under=50 reddit/tests/tests_db.py"
+filterwarnings = [
+    "ignore::Warning",    
+]
