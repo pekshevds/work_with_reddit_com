@@ -5,6 +5,10 @@ from pydantic import BaseModel
 type Json = dict[str, Any]
 
 
+class RequestError(Exception):
+    pass
+
+
 class Post(BaseModel):
     id: str
     author: str
@@ -54,7 +58,10 @@ class RedditAuth:
             data=data,
             headers=headers,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError:
+            raise RequestError(f"{response.status_code} - {response.reason_phrase}")
         self.token = response.json().get("access_token", "")
 
 
@@ -72,7 +79,10 @@ class RedditClient:
         url = f"{self.base_url}/r/{subreddit}/new"
 
         response = httpx.get(url, headers=self.headers, params=params)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError:
+            raise RequestError(f"{response.status_code} - {response.reason_phrase}")
 
         data = response.json().get("data")
         if not data:
