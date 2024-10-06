@@ -1,6 +1,6 @@
 # work_with_reddit_com
 
-config.py required
+.env required
 CLIENT_ID = "..."
 SECRET_TOKEN = "..."
 USERNAME = "..."

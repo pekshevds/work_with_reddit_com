@@ -1,5 +1,12 @@
 import sqlite3
 from datetime import datetime
+from pydantic import BaseModel
+
+
+class Post(BaseModel):
+    author: str
+    created: datetime
+    num_comments: int
 
 
 class Table:
@@ -12,22 +19,26 @@ class Table:
     def __del__(self) -> None:
         self.connection.close()
 
-    def add_row(self, author: str, created: datetime, num_comments: int) -> None:
+    def add(self, post: Post) -> None:
         cursor = self.connection.cursor()
         cursor.execute(
             "INSERT INTO _table (author, created, num_comments) VALUES (?, ?, ?)",
             (
-                author,
-                created,
-                num_comments,
+                post.author,
+                post.created,
+                post.num_comments,
             ),
         )
 
-    def raw_rows(self) -> list[tuple[str, datetime, int]]:
+    def raw_posts(self) -> list[Post]:
         cursor = self.connection.cursor()
-        return list(cursor.execute("SELECT * FROM _table"))
+        cursor.execute("SELECT * FROM _table")
+        return [
+            Post(author=post[0], created=post[1], num_comments=post[2])
+            for post in cursor.fetchall()
+        ]
 
-    def rows(self, created: datetime) -> list[tuple[str, int, int]]:
+    def posts(self, created: datetime) -> list[tuple[str, int, int]]:
         cursor = self.connection.cursor()
         return list(
             cursor.execute(
@@ -46,7 +57,7 @@ class Table:
             )
         )
 
-    def rows_most_of_comments(self, created: datetime) -> list[tuple[str, int]]:
+    def posts_most_of_comments(self, created: datetime) -> list[tuple[str, int]]:
         cursor = self.connection.cursor()
         return list(
             cursor.execute(
@@ -65,7 +76,7 @@ class Table:
             )
         )
 
-    def rows_most_of_posts(self, created: datetime) -> list[tuple[str, int]]:
+    def posts_most_of_posts(self, created: datetime) -> list[tuple[str, int]]:
         cursor = self.connection.cursor()
         return list(
             cursor.execute(
